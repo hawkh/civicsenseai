@@ -1,0 +1,196 @@
+CivicSense-AI: Product, Design, and Sprint Plan
+
+One-liner
+
+An agentic, multimodal AI platform that automates the entire lifecycle of citizen-reported civic issues, from intake and classification to verified resolution.
+
+Top 3 Judges-Friendly Bullets
+
+* Agentic & Multimodal: Ingests and understands images, video, voice, and text from WhatsApp and web to automatically classify, prioritize, and create structured service tickets.
+* Vision-Verified Closure: Employs a before-and-after computer vision check to automatically verify that work has been completed, reducing fraud and ensuring auditability.
+* Rapid Pilot MVP: A 6-week plan delivers a pilot-ready system with a dashboard, focusing on three core issue types (garbage, potholes, illegal dumping) to prove immediate value.
+
+Problem
+
+* Slow Resolution Time: Manual triage and routing of citizen reports lead to significant delays, with a high median time-to-resolution for common civic issues.
+* Inaccurate Routing: Lack of structured data from citizen reports causes frequent misclassification, leading to tickets being routed to the wrong municipal departments and increasing SLA breaches.
+* High Operational Overhead: Municipal staff spend excessive time creating duplicate tickets, manually verifying resolutions, and handling escalations, reducing overall efficiency.
+* Lack of Transparency: Citizens receive poor feedback on the status of their reports and have no verifiable proof of issue resolution, leading to decreased satisfaction and trust.
+
+Solution Summary
+
+For the hackathon, the system will demonstrate the core end-to-end loop for the MVP scope.
+
+1. Multimodal Intake: Ingest a citizen report containing an image and text via a web form and a WhatsApp interface.
+2. AI Processing: Automatically classify the issue as one of three types (garbage, pothole, illegal dumping), extract key details, and assign a severity score.
+3. Agentic Ticketing: Create a routable service ticket and dispatch it via a structured email (fallback for municipal API), while sending a confirmation with a ticket ID back to the citizen via WhatsApp.
+4. Supervisor Dashboard: Display the new ticket on a supervisor dashboard with its status, location on a heatmap, and SLA compliance indicator.
+5. Verified Closure: Simulate a field staff response by uploading an "after" photo, which the system's vision model will compare to the "before" photo to automatically verify closure and update the dashboard.
+
+North Star + 4 KPIs
+
+Metric	Target	Measurement Method
+North Star: Median Resolution Time Reduction	≥ 40%	Measured against historical baseline data in the pilot zone.
+Routing Accuracy	≥ 85%	Measured on a labeled test set of 1,000 diverse complaints.
+Verification Accuracy	≥ 80%	Measured as true-positive closure detection on a labeled test set of before/after image pairs.
+Duplicate Reduction	≥ 50%	Measured by comparing system-generated unique tickets to raw intake volume in the pilot.
+End-to-End Processing Latency	< 60s (avg)	Measured from media upload completion to ticket creation confirmation for multimodal reports.
+
+Functional Requirements
+
+Citizen
+
+1. FR-C-01: Report via WhatsApp: A citizen can send an image, video, voice note, or text message to a designated WhatsApp number to report an issue.
+  * Acceptance: Uploading media and text to the WhatsApp number results in a ticket ID being returned within 60 seconds.
+2. FR-C-02: Report via Web: A citizen can use a simple web form to upload media and provide a text description of an issue.
+  * Acceptance: Submitting the web form creates a ticket and displays a confirmation page with the ticket ID.
+3. FR-C-03: Receive Acknowledgement: A citizen receives an automated acknowledgement via WhatsApp/SMS containing a unique ticket ID and an estimated SLA.
+  * Acceptance: For 95%+ of valid submissions, an acknowledgement message is sent to the reporter's phone number.
+4. FR-C-04: Check Ticket Status: A citizen can use a public web portal to check the status of their submitted ticket using the ticket ID.
+  * Acceptance: Entering a valid ticket ID on the citizen portal displays the current status (e.g., 'Acknowledged', 'In Progress', 'Closed').
+
+Field Staff
+
+1. FR-FS-01: Receive Task: Field staff receive a task notification containing ticket details and evidence links via their internal system or a structured email.
+  * Acceptance: A ticket created by the system generates a correctly formatted email with all required information.
+2. FR-FS-02: Submit Proof of Resolution: Field staff can upload a photo or video as proof of work completion via a mobile-friendly web page.
+  * Acceptance: Uploading a photo to the designated proof submission URL successfully attaches it to the correct ticket for verification.
+
+Supervisor
+
+1. FR-S-01: View Dashboard: A supervisor can log in to a web dashboard to see an overview of all active tickets.
+  * Acceptance: The dashboard correctly displays counts of active tickets, SLA compliance metrics, and a list of recent tickets.
+2. FR-S-02: View Hotspot Map: The dashboard includes a map view that visualizes the geographic concentration (hotspots) of reported issues.
+  * Acceptance: The map accurately plots open tickets and filters them by issue type and status.
+3. FR-S-03: Manage Verification Queue: A supervisor can view and manually approve or reject closures that the automated verification model flags for review.
+  * Acceptance: Tickets with a verification confidence score below the threshold appear in the 'Verification Review' queue.
+4. FR-S-04: Manual Override: A supervisor can manually reassign a ticket to a different department or override its status.
+  * Acceptance: A supervisor can change a ticket's assigned department, and the change is logged in the audit trail.
+5. FR-S-05: Export Reports: A supervisor can export daily or weekly summary reports in CSV or PDF format.
+  * Acceptance: The export function generates a CSV file containing all tickets from the selected time period with their key metadata.
+
+System
+
+1. FR-SYS-01: Ingest Multimodal Data: The system ingests and stores evidence from WhatsApp, web uploads, and CSV bulk imports.
+  * Acceptance: All incoming media is successfully stored in object storage, and metadata is saved to the database.
+2. FR-SYS-02: Classify Issue Type: The system uses a vision model to classify issues into one of the three MVP categories (garbage, pothole, illegal dumping).
+  * Acceptance: The model achieves ≥85% classification accuracy on the held-out test set.
+3. FR-SYS-03: Create Structured Complaint: The system fuses all extracted data (issue type, location, text, media) into a single structured complaint object.
+  * Acceptance: A valid complaint object is created and persisted for every valid incoming report.
+4. FR-SYS-04: Deduplicate Reports: The system identifies and merges reports that are highly similar in location and type within a 48-hour window.
+  * Acceptance: Submitting two identical reports for the same location within 5 minutes results in only one new ticket being created.
+5. FR-SYS-05: Auto-Verify Closure: The system compares before/after images and automatically marks the ticket 'Verified-Closed' if the confidence score exceeds a set threshold.
+  * Acceptance: The change-detection model correctly classifies ≥80% of resolution proofs in the labeled test set.
+
+Minimal Tech Architecture
+
+The system is built on a microservices architecture. A React/Streamlit frontend and a WhatsApp webhook serve as the primary intake channels, communicating with a FastAPI API layer that handles business logic. An agentic orchestration layer, built with LangChain/AutoGen, uses policy rules and model outputs to manage the ticketing workflow. AI models are served via dedicated, scalable endpoints. All data is persisted securely, using object storage for raw media and a PostgreSQL database for structured metadata, with Redis for caching and queuing.
+
+* Intake Service (FastAPI): Manages all incoming reports from web/WhatsApp, validates data, and places jobs on a queue.
+* Orchestration Service (Agent Layer): Consumes jobs, calls ML services, applies business rules for prioritization, and triggers ticketing actions.
+* ML Serving Endpoints (TorchServe/Triton): Hosts and serves the vision, ASR, NLU, and change-detection models via REST APIs.
+* Postgres Database: Stores all structured metadata for complaints, tickets, users, and evidence. The single source of truth.
+* Object Storage (S3-compatible): Securely stores all raw media files (images, videos, voice notes) associated with complaints.
+* Redis: Used as a message queue for asynchronous processing and as a cache for frequently accessed data to reduce latency.
+
+Data Flow (3 steps):
+
+1. A citizen submits a report via WhatsApp, which hits the Intake Service webhook. The media is saved to Object Storage and a job is pushed to Redis.
+2. The Orchestration Service picks up the job, calls the relevant ML Serving Endpoints for classification and entity extraction, and generates a structured ticket payload.
+3. The agentic layer executes the ticketing action (API call or email fallback), and the final ticket metadata is written to the Postgres DB.
+
+AI Components
+
+Component	Purpose	Input	Accuracy/Metric Target	Fallback Behavior
+Issue Detector	Classifies image into garbage, pothole, illegal dumping, or other.	Image	≥85% classification accuracy	Classify as other and route to a human review queue.
+ASR Pipeline	Transcribes citizen voice notes into text for NLU processing.	Audio file (voice note)	≤15% Word Error Rate	Process ticket with media only; flag for manual transcription.
+NLU Extractor	Extracts key entities like location description and urgency from text.	Transcribed text	≥80% F1-score on key entities	Use default values; rely on GPS/image data for routing.
+Deduplication	Identifies and merges duplicate reports.	Complaint object (location, type, timestamp)	≥95% precision	Process as a new ticket. Decision: Tolerate extra tickets over missing a unique one.
+Severity Scorer	Assigns a priority score based on issue type, location, and context.	Complaint object	N/A (Rule-based)	Assign default medium severity for the issue type.
+Change Detector	Compares before/after images to verify resolution.	Two images (before/after)	≥80% verification accuracy	Flag for manual review in the supervisor's verification queue.
+
+6-Week Sprint Plan
+
+Sprint 0: Kickoff & Scaffolding (Week 0)
+
+* Goal: Establish project infrastructure, define core data models, and acquire initial data.
+* Tasks:
+  1. Project kickoff, role assignment, repo & cloud setup. (Owner: PM)
+  2. Define DB schemas and OpenAPI v1 skeleton. (Owner: BE)
+  3. Create wireframes for all key user flows. (Owner: PM/FE)
+  4. Collect and label an initial dataset of 500 images. (Owner: ML)
+* Acceptance Criteria: Code repository is active, DB schema is committed, and initial labeled dataset is available in object storage.
+
+Sprint 1: Core Intake & Storage (Week 1)
+
+* Goal: Build the foundational intake pipeline for web and WhatsApp.
+* Tasks:
+  1. Implement FastAPI intake endpoints and connect to Postgres/S3. (Owner: BE)
+  2. Integrate WhatsApp webhook for receiving messages in a test environment. (Owner: BE)
+  3. Develop a basic web upload page for testing. (Owner: FE)
+* Acceptance Criteria: A photo uploaded via the web form or sent to the WhatsApp number is successfully saved to S3 with metadata in Postgres.
+
+Sprint 2: Vision & ASR Pipelines (Week 2)
+
+* Goal: Integrate core AI models for understanding reports.
+* Tasks:
+  1. Fine-tune and deploy a YOLOv8 detector for the 3 issue classes. (Owner: ML)
+  2. Implement the ASR (Whisper) pipeline for voice note transcription. (Owner: ML)
+  3. Create the structured Complaint object by fusing model outputs. (Owner: BE)
+* Acceptance Criteria: The orchestration service can take raw report data and produce a fully populated, classified Complaint object.
+
+Sprint 3: Agentic Routing & Ticketing (Week 3)
+
+* Goal: Implement the automated ticket creation and citizen notification loop.
+* Tasks:
+  1. Build rule-based routing logic for the 3 issue types. (Owner: BE)
+  2. Implement ticket creation via email fallback. (Owner: BE)
+  3. Implement the acknowledgement message sent back to the user via WhatsApp. (Owner: BE)
+* Acceptance Criteria: A successfully classified report automatically generates a structured email to a target inbox and sends a confirmation to the user.
+
+Sprint 4: Verification & Dashboard (Week 4)
+
+* Goal: Build the closure verification loop and the supervisor UI.
+* Tasks:
+  1. Implement and deploy the change-detection model endpoint. (Owner: ML)
+  2. Build the supervisor dashboard with a ticket list and map view. (Owner: FE)
+  3. Create the verification queue UI for manual review. (Owner: FE)
+  4. Connect dashboard and verification UI to backend services. (Owner: BE)
+* Acceptance Criteria: The dashboard displays real-time ticket data, and a supervisor can manually approve a closure from the verification queue.
+
+Sprint 5: Hardening & Demo Prep (Week 5)
+
+* Goal: Stabilize the system, add monitoring, and prepare for the final demo.
+* Tasks:
+  1. Integrate basic monitoring (Prometheus) and error tracking (Sentry). (Owner: BE)
+  2. Conduct end-to-end testing and tune model thresholds. (Owner: PM/ML)
+  3. Optimize critical path latency (intake -> ticket). (Owner: BE/ML)
+  4. Prepare the hackathon demo script and presentation. (Owner: PM)
+* Acceptance Criteria: The end-to-end flow is functional and reliable, and a complete demo can be run successfully 5 times in a row.
+
+Risks & Mitigations
+
+1. Low-quality media inputs: Guide users with on-screen tips; use models robust to noise; fallback to a human review queue for unclassifiable media.
+2. Delayed municipal API integration: Use a structured email fallback as the primary mechanism for the pilot; a simulated API can be used for the demo.
+3. Abuse or gaming of the system: Implement rate limiting per phone number; add a simple reputation score; flag suspicious patterns for manual audit.
+4. Inadequate model accuracy: Continuously label production data (especially failures) for retraining; implement a human-in-the-loop audit for the first 500 closures to build trust.
+5. PII data leaks or compliance failure: Encrypt all PII at rest and in transit; implement strict Role-Based Access Control (RBAC); ensure consent is captured at intake.
+6. Failure to meet performance NFRs: Use asynchronous processing for heavy tasks; implement caching for common data; configure autoscaling for ML model endpoints.
+
+Demo Script (≤ 4 minutes)
+
+1. The Problem (Citizen View): "Imagine you're a citizen who sees a massive pile of garbage. You just take out your phone." Open WhatsApp, send a photo and the message "This has been here for days near the school" to the CivicSense number.
+2. Automated Intake & Triage (System View): Immediately switch to the Supervisor Dashboard. "Instantly, our AI gets to work." Show the new ticket appearing on the map and in the list, correctly classified as 'Garbage' with an elevated severity due to proximity to a school. Show the acknowledgement message received on the phone with a ticket ID.
+3. Dispatch & Resolution (Field Staff Simulation): "The ticket is routed, and a field team is dispatched. Once the job is done, they simply send back a photo of the clean area." Upload the "after" picture through a simple mobile web interface for the corresponding ticket ID.
+4. AI-Verified Closure (System View): Switch back to the Supervisor Dashboard. "Our vision AI now performs a before-and-after check." Show the ticket status automatically change from 'In Progress' to 'Verified-Closed' with a high confidence score.
+5. The Impact (Supervisor View): "This entire loop, from report to verified resolution, is now automated. Supervisors can focus on exceptions and hotspots, not paperwork." Briefly show the dashboard metrics, highlighting how this improves efficiency and provides an auditable trail of all civic work.
+
+Deliverables for Submission
+
+* [ ] Deployed Demo URL: Link to the live web app (supervisor dashboard & citizen status page).
+* [ ] WhatsApp Number: The phone number for interacting with the live demo.
+* [ ] Video: A short (≤ 3 minute) video demonstrating the end-to-end user flow.
+* [ ] Presentation Slides: A brief slide deck outlining the problem, solution, architecture, and impact.
+* [ ] Source Code Repository: Public link to the GitHub repository with a comprehensive README.
+* [ ] API Specification: Link to the OpenAPI (Swagger) specification for the system's core services.
+* [ ] One-Pager: A concise, single-page PDF summarizing the project.
