@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from typing import List, Optional
 
 from . import models, schemas, database
@@ -82,5 +82,15 @@ async def whatsapp_webhook(data: dict, db: Session = Depends(get_db)):
 
 @app.get("/api/v1/tickets", response_model=List[schemas.Complaint])
 def read_tickets(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    complaints = db.query(models.Complaint).offset(skip).limit(limit).all()
+    # Optimized query to fetch complaints with evidence and tickets in fewer queries
+    complaints = (
+        db.query(models.Complaint)
+        .options(
+            selectinload(models.Complaint.evidence),
+            joinedload(models.Complaint.ticket),
+        )
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
     return complaints
