@@ -41,7 +41,7 @@ async def create_report(
     db: Session = Depends(get_db)
 ):
     # 1. Save File
-    file_path = storage.save_upload_file(file)
+    file_path = await storage.save_upload_file(file)
 
     # 2. Create Complaint
     db_complaint = models.Complaint(
