@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI, Request
 
 from app.api.v1.issues import router as issues_router
+from app.api.v1.reports import router as reports_router
 from app.events.handler import handle_pubsub_message
 
 from app.crews.vision.worker import VisionWorker
@@ -22,6 +23,11 @@ PUBSUB_TOPIC = os.getenv("PUBSUB_TOPIC")
 
 app = FastAPI(title="CivicSense AI Backend")
 app.include_router(issues_router)
+app.include_router(reports_router)
+
+# Create tables on startup (for SQLite)
+from app.database import engine, Base
+Base.metadata.create_all(bind=engine)
 
 # -------------------------
 # Factories

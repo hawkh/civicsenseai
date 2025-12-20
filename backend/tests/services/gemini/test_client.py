@@ -9,11 +9,12 @@ class DummySchema(BaseModel):
     result: str
 
 
-@patch("app.services.gemini.client.aiplatform")
-def test_valid_structured_output(mock_aiplatform):
+@patch("app.services.gemini.client.genai")
+def test_valid_structured_output(mock_genai):
     mock_model = MagicMock()
+    # Mock response.text to return valid JSON
     mock_model.generate_content.return_value.text = '{"result": "ok"}'
-    mock_aiplatform.GenerativeModel.return_value = mock_model
+    mock_genai.GenerativeModel.return_value = mock_model
 
     client = GeminiClient(project_id="test-project")
     output = client.generate_structured_output(
@@ -24,11 +25,11 @@ def test_valid_structured_output(mock_aiplatform):
     assert output.result == "ok"
 
 
-@patch("app.services.gemini.client.aiplatform")
-def test_invalid_schema_raises(mock_aiplatform):
+@patch("app.services.gemini.client.genai")
+def test_invalid_schema_raises(mock_genai):
     mock_model = MagicMock()
     mock_model.generate_content.return_value.text = '{"invalid": "data"}'
-    mock_aiplatform.GenerativeModel.return_value = mock_model
+    mock_genai.GenerativeModel.return_value = mock_model
 
     client = GeminiClient(project_id="test-project")
 
