@@ -20,7 +20,7 @@ class VisionWorker:
         self.gemini = gemini
         self.publisher = publisher
 
-    def handle(self, issue_id: str):
+    async def handle(self, issue_id: str):
         """
         Process ISSUE_SUBMITTED event.
         """
@@ -35,9 +35,11 @@ class VisionWorker:
 
         prompt = self._build_prompt(issue)
 
-        classification: VisionClassification = self.gemini.generate_structured_output(
-            prompt=prompt,
-            output_schema=VisionClassification,
+        classification: VisionClassification = (
+            self.gemini.generate_structured_output(
+                prompt=prompt,
+                output_schema=VisionClassification,
+            )
         )
 
         self.repo.update_status(

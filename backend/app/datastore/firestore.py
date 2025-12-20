@@ -4,12 +4,12 @@ from app.domain.models import Issue, IssueStatus
 
 LOCAL_DEV = os.getenv("LOCAL_DEV", "false").lower() == "true"
 
+# 🔑 GLOBAL in-memory store (shared)
+_LOCAL_STORE = {}
+
 
 class IssueRepository:
     def __init__(self, client=None):
-        # In-memory store for local dev
-        self._store = {}
-
         if not LOCAL_DEV:
             from google.cloud import firestore
             self.client = client or firestore.Client()
@@ -17,7 +17,7 @@ class IssueRepository:
 
     def create(self, issue: Issue):
         if LOCAL_DEV:
-            self._store[issue.issue_id] = issue
+            _LOCAL_STORE[issue.issue_id] = issue
             return issue
 
         self.collection.document(issue.issue_id).set(issue.model_dump())
@@ -25,7 +25,7 @@ class IssueRepository:
 
     def get(self, issue_id: str) -> Optional[Issue]:
         if LOCAL_DEV:
-            return self._store.get(issue_id)
+            return _LOCAL_STORE.get(issue_id)
 
         doc = self.collection.document(issue_id).get()
         if not doc.exists:
@@ -49,7 +49,7 @@ class IssueRepository:
                 setattr(issue, k, v)
 
         if LOCAL_DEV:
-            self._store[issue_id] = issue
+            _LOCAL_STORE[issue_id] = issue
             return issue
 
         self.collection.document(issue_id).set(issue.model_dump())

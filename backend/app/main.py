@@ -50,7 +50,7 @@ async def vision_event(request: Request):
         gemini=get_gemini(),
         publisher=get_publisher(),
     )
-    return handle_pubsub_message(request, worker.handle)
+    return await handle_pubsub_message(request, worker.handle)
 
 
 @app.post("/events/routing")
@@ -60,7 +60,7 @@ async def routing_event(request: Request):
         gemini=get_gemini(),
         publisher=get_publisher(),
     )
-    return handle_pubsub_message(request, worker.handle)
+    return await handle_pubsub_message(request, worker.handle)
 
 
 @app.post("/events/verification")
@@ -70,4 +70,4 @@ async def verification_event(request: Request):
         gemini=get_gemini(),
         publisher=get_publisher(),
     )
-    return handle_pubsub_message(request, worker.handle)
+    return await handle_pubsub_message(request, worker.handle)
