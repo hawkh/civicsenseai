@@ -1,0 +1,56 @@
+import os
+from typing import Optional
+from app.domain.models import Issue, IssueStatus
+
+LOCAL_DEV = os.getenv("LOCAL_DEV", "false").lower() == "true"
+
+
+class IssueRepository:
+    def __init__(self, client=None):
+        # In-memory store for local dev
+        self._store = {}
+
+        if not LOCAL_DEV:
+            from google.cloud import firestore
+            self.client = client or firestore.Client()
+            self.collection = self.client.collection("issues")
+
+    def create(self, issue: Issue):
+        if LOCAL_DEV:
+            self._store[issue.issue_id] = issue
+            return issue
+
+        self.collection.document(issue.issue_id).set(issue.model_dump())
+        return issue
+
+    def get(self, issue_id: str) -> Optional[Issue]:
+        if LOCAL_DEV:
+            return self._store.get(issue_id)
+
+        doc = self.collection.document(issue_id).get()
+        if not doc.exists:
+            return None
+        return Issue(**doc.to_dict())
+
+    def update_status(
+        self,
+        issue_id: str,
+        new_status: IssueStatus,
+        updates: Optional[dict] = None,
+    ):
+        issue = self.get(issue_id)
+        if not issue:
+            raise ValueError("Issue not found")
+
+        issue.transition_to(new_status)
+
+        if updates:
+            for k, v in updates.items():
+                setattr(issue, k, v)
+
+        if LOCAL_DEV:
+            self._store[issue_id] = issue
+            return issue
+
+        self.collection.document(issue_id).set(issue.model_dump())
+        return issue
