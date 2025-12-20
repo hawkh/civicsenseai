@@ -1,5 +1,9 @@
+from dotenv import load_dotenv
+load_dotenv()
 import os
+import logging
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.issues import router as issues_router
 from app.events.handler import handle_pubsub_message
@@ -13,35 +17,58 @@ from app.services.gemini.client import GeminiClient
 from app.events.publisher import EventPublisher
 
 
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(levelname)s:%(name)s:%(message)s",
+)
+
+logger = logging.getLogger(__name__)
+
+
+LOCAL_DEV = os.getenv("LOCAL_DEV", "false").lower() == "true"
 PROJECT_ID = os.getenv("GCP_PROJECT_ID")
 PUBSUB_TOPIC = os.getenv("PUBSUB_TOPIC")
 
-# -------------------------
-# App
-# -------------------------
+if not LOCAL_DEV:
+    if not PROJECT_ID:
+        raise RuntimeError("GCP_PROJECT_ID env var not set")
+    if not PUBSUB_TOPIC:
+        raise RuntimeError("PUBSUB_TOPIC env var not set")
+else:
+    logger.info("Running in LOCAL_DEV mode")
+
 
 app = FastAPI(title="CivicSense AI Backend")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://relieved-parakeet-ghastly.ngrok-free.app",
+    ],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(issues_router)
 app.include_router(issues_router)
 
-# -------------------------
-# Factories
-# -------------------------
 
-def get_repo():
+def get_repo() -> IssueRepository:
     return IssueRepository()
 
-def get_gemini():
+def get_gemini() -> GeminiClient | None:
+    if LOCAL_DEV:
+        return None
     return GeminiClient(project_id=PROJECT_ID)
 
-def get_publisher():
+def get_publisher() -> EventPublisher | None:
+    if LOCAL_DEV:
+        return None
     return EventPublisher(
         project_id=PROJECT_ID,
         topic_name=PUBSUB_TOPIC,
     )
 
-# -------------------------
-# Agent Event Endpoints
-# -------------------------
 
 @app.post("/events/vision")
 async def vision_event(request: Request):
