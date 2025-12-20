@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 import uuid
+import os
+from typing import List
 
 from app.domain.models import Issue, IssueStatus
 from app.domain.schemas import IssueCreateRequest, IssueCreateResponse
@@ -8,12 +10,18 @@ from app.events.publisher import EventPublisher
 
 router = APIRouter(prefix="/api/v1/issues", tags=["issues"])
 
+LOCAL_DEV = os.getenv("LOCAL_DEV", "false").lower() == "true"
+
 
 def get_repo():
     return IssueRepository()
 
 
 def get_publisher():
+    # In local dev, do NOT publish to Pub/Sub
+    if LOCAL_DEV:
+        return None
+
     return EventPublisher(
         project_id="civicsense-481806",
         topic_name="civicsense",
@@ -38,12 +46,32 @@ def create_issue(
 
     repo.create(issue)
 
-    publisher.publish(
-        event_type="ISSUE_SUBMITTED",
-        issue_id=issue_id,
-    )
+    # Publish only if publisher exists (cloud)
+    if publisher:
+        publisher.publish(
+            event_type="ISSUE_SUBMITTED",
+            issue_id=issue_id,
+        )
 
     return IssueCreateResponse(
         issue_id=issue_id,
         status=issue.status,
     )
+
+
+@router.get("/{issue_id}", response_model=Issue)
+def get_issue(
+    issue_id: str,
+    repo: IssueRepository = Depends(get_repo),
+):
+    issue = repo.get(issue_id)
+    if not issue:
+        raise HTTPException(status_code=404, detail="Issue not found")
+    return issue
+
+
+@router.get("", response_model=List[Issue])
+def list_issues(
+    repo: IssueRepository = Depends(get_repo),
+):
+    return repo.list_all()
