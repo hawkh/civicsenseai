@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()
 import os
 import logging
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, APIRouter, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.issues import router as issues_router
@@ -49,8 +49,12 @@ app.add_middleware(
 
 
 app.include_router(issues_router)
-app.include_router(issues_router)
 
+router = APIRouter(prefix="/api/v1/issues")
+
+@router.options("")
+async def options_issues():
+    return Response(status_code=204)
 
 def get_repo() -> IssueRepository:
     return IssueRepository()
