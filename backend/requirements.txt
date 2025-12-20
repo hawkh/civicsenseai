@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+sqlalchemy
+python-multipart
+requests
+ultralytics
+google-generativeai
+pillow
+opencv-python-headless
+python-dateutil
