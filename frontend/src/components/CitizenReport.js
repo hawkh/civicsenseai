@@ -1,16 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 
 function CitizenReport() {
   const [description, setDescription] = useState('');
   const [contactInfo, setContactInfo] = useState('');
-  const [file, setFile] = useState(null);
+
+  // Separate state for image and audio
+  const [imageFile, setImageFile] = useState(null);
+  const [audioFile, setAudioFile] = useState(null);
+
   const [message, setMessage] = useState('');
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef(null);
+
+  // Use useRef to store chunks to avoid closure issues in onstop callback
+  const audioChunksRef = useRef([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = []; // Reset chunks
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        // Create a File object from the Blob
+        const recordedFile = new File([audioBlob], "voice_report.webm", { type: "audio/webm" });
+        setAudioFile(recordedFile);
+        audioChunksRef.current = []; // Clear chunks
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      setMessage("Error accessing microphone.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      // Stop all tracks to release microphone
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file) {
-      setMessage('Please upload an image.');
+    if (!imageFile && !audioFile && !description) {
+      setMessage('Please upload an image/audio or provide a description.');
       return;
     }
 
@@ -18,17 +65,33 @@ function CitizenReport() {
     formData.append('description', description);
     formData.append('contact_info', contactInfo);
     formData.append('source', 'web');
-    formData.append('file', file);
+
+    // Append files with specific keys
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
+    if (audioFile) {
+      formData.append('audio', audioFile);
+    }
 
     try {
+      setMessage('Submitting...');
       const response = await axios.post('/api/v1/reports', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
-      setMessage(`Report submitted! ID: ${response.data.id}`);
+
+      let msg = `Report submitted! ID: ${response.data.id}`;
+      if (response.data.description && response.data.description !== description) {
+         msg += ` (Transcribed: ${response.data.description})`;
+      }
+      setMessage(msg);
+
       setDescription('');
-      setFile(null);
+      setContactInfo('');
+      setImageFile(null);
+      setAudioFile(null);
     } catch (error) {
       setMessage('Error submitting report.');
       console.error(error);
@@ -47,9 +110,29 @@ function CitizenReport() {
             onChange={(e) => setDescription(e.target.value)}
             rows="4"
             style={{ width: '100%' }}
-            required
+            placeholder="Describe the issue or record voice..."
           />
         </div>
+
+        <div style={{ marginBottom: '10px' }}>
+            <label>Voice Input:</label><br/>
+            {!isRecording ? (
+                <button type="button" onClick={startRecording} style={{backgroundColor: '#4CAF50', color: 'white', padding: '10px', border: 'none', borderRadius: '5px', cursor: 'pointer'}}>
+                    🎤 Start Recording
+                </button>
+            ) : (
+                <button type="button" onClick={stopRecording} style={{backgroundColor: '#f44336', color: 'white', padding: '10px', border: 'none', borderRadius: '5px', cursor: 'pointer'}}>
+                    ⏹ Stop Recording
+                </button>
+            )}
+            {audioFile && <span style={{marginLeft: '10px', color: 'green'}}>✓ Audio recorded.</span>}
+            {audioFile && (
+                <button type="button" onClick={() => setAudioFile(null)} style={{marginLeft: '10px', padding: '2px 5px', fontSize: '12px'}}>
+                    Remove
+                </button>
+            )}
+        </div>
+
         <div style={{ marginBottom: '10px' }}>
           <label>Contact Info (Optional):</label>
           <br />
@@ -60,17 +143,20 @@ function CitizenReport() {
             style={{ width: '100%' }}
           />
         </div>
+
         <div style={{ marginBottom: '10px' }}>
-          <label>Upload Evidence:</label>
+          <label>Upload Image:</label>
           <br />
           <input
             type="file"
-            onChange={(e) => setFile(e.target.files[0])}
+            onChange={(e) => setImageFile(e.target.files[0])}
             accept="image/*"
-            required
+            // Note: We restricting this input to images since we have a dedicated voice recorder
+            // but users can still technically upload whatever, but the prompt implies visual evidence here.
           />
         </div>
-        <button type="submit">Submit Report</button>
+
+        <button type="submit" style={{padding: '10px 20px', fontSize: '16px'}}>Submit Report</button>
       </form>
       {message && <p>{message}</p>}
     </div>

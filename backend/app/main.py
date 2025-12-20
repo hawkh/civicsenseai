@@ -6,6 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.issues import router as issues_router
+from app.api.v1.reports import router as reports_router
 from app.events.handler import handle_pubsub_message
 
 from app.crews.vision.worker import VisionWorker
@@ -50,6 +51,11 @@ app.add_middleware(
 
 app.include_router(issues_router)
 app.include_router(issues_router)
+app.include_router(reports_router)
+
+# Create tables on startup (for SQLite)
+from app.database import engine, Base
+Base.metadata.create_all(bind=engine)
 
 
 def get_repo() -> IssueRepository:
