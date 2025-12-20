@@ -41,13 +41,12 @@ else:
 app = FastAPI(title="CivicSense AI Backend")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://relieved-parakeet-ghastly.ngrok-free.app",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 app.include_router(issues_router)
 app.include_router(issues_router)
