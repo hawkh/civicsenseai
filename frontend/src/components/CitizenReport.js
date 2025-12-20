@@ -4,7 +4,11 @@ import axios from 'axios';
 function CitizenReport() {
   const [description, setDescription] = useState('');
   const [contactInfo, setContactInfo] = useState('');
-  const [file, setFile] = useState(null);
+
+  // Separate state for image and audio
+  const [imageFile, setImageFile] = useState(null);
+  const [audioFile, setAudioFile] = useState(null);
+
   const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
@@ -28,8 +32,8 @@ function CitizenReport() {
       mediaRecorder.onstop = () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         // Create a File object from the Blob
-        const audioFile = new File([audioBlob], "voice_report.webm", { type: "audio/webm" });
-        setFile(audioFile);
+        const recordedFile = new File([audioBlob], "voice_report.webm", { type: "audio/webm" });
+        setAudioFile(recordedFile);
         audioChunksRef.current = []; // Clear chunks
       };
 
@@ -52,7 +56,7 @@ function CitizenReport() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!file && !description) {
+    if (!imageFile && !audioFile && !description) {
       setMessage('Please upload an image/audio or provide a description.');
       return;
     }
@@ -61,8 +65,13 @@ function CitizenReport() {
     formData.append('description', description);
     formData.append('contact_info', contactInfo);
     formData.append('source', 'web');
-    if (file) {
-      formData.append('file', file);
+
+    // Append files with specific keys
+    if (imageFile) {
+      formData.append('image', imageFile);
+    }
+    if (audioFile) {
+      formData.append('audio', audioFile);
     }
 
     try {
@@ -81,7 +90,8 @@ function CitizenReport() {
 
       setDescription('');
       setContactInfo('');
-      setFile(null);
+      setImageFile(null);
+      setAudioFile(null);
     } catch (error) {
       setMessage('Error submitting report.');
       console.error(error);
@@ -115,7 +125,12 @@ function CitizenReport() {
                     ⏹ Stop Recording
                 </button>
             )}
-            {file && file.type.startsWith('audio') && <span style={{marginLeft: '10px'}}>Audio recorded ready to submit.</span>}
+            {audioFile && <span style={{marginLeft: '10px', color: 'green'}}>✓ Audio recorded.</span>}
+            {audioFile && (
+                <button type="button" onClick={() => setAudioFile(null)} style={{marginLeft: '10px', padding: '2px 5px', fontSize: '12px'}}>
+                    Remove
+                </button>
+            )}
         </div>
 
         <div style={{ marginBottom: '10px' }}>
@@ -128,15 +143,19 @@ function CitizenReport() {
             style={{ width: '100%' }}
           />
         </div>
+
         <div style={{ marginBottom: '10px' }}>
-          <label>Upload Evidence (Image/Audio):</label>
+          <label>Upload Image:</label>
           <br />
           <input
             type="file"
-            onChange={(e) => setFile(e.target.files[0])}
-            accept="image/*,audio/*,video/*"
+            onChange={(e) => setImageFile(e.target.files[0])}
+            accept="image/*"
+            // Note: We restricting this input to images since we have a dedicated voice recorder
+            // but users can still technically upload whatever, but the prompt implies visual evidence here.
           />
         </div>
+
         <button type="submit" style={{padding: '10px 20px', fontSize: '16px'}}>Submit Report</button>
       </form>
       {message && <p>{message}</p>}

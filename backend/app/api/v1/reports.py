@@ -21,57 +21,73 @@ class AudioAnalysis(BaseModel):
     contact_info: str | None = None
 
 @router.post("")
-async def create_report(
+def create_report(
     background_tasks: BackgroundTasks,
     description: str = Form(None),
     contact_info: str = Form(None),
     source: str = Form("web"),
+    # Updated to accept separate image and audio files
+    image: UploadFile = File(None),
+    audio: UploadFile = File(None),
+    # Maintain backward compatibility with 'file' just in case, or deprecate it.
+    # For this refactor, let's assume 'file' is mapped to 'image' or 'audio' by the caller if needed,
+    # but strictly we are changing the contract to support both.
+    # To avoid breaking existing clients (if any), we can keep 'file' as a fallback,
+    # but the plan is to change the frontend too.
+    # Let's support 'file' as a generic catch-all if image/audio aren't used, but prioritize explicit fields.
     file: UploadFile = File(None),
     db: Session = Depends(get_db),
 ):
-    # Determine media type
-    media_type = "unknown"
-    file_path = None
+    # Consolidate inputs
+    files_to_process = []
 
-    if file:
-        if file.content_type.startswith("image"):
-            media_type = "image"
-        elif file.content_type.startswith("audio"):
-            media_type = "audio"
-        elif file.content_type.startswith("video"):
-            media_type = "video"
+    if image:
+        files_to_process.append({"file": image, "type": "image"})
+    if audio:
+        files_to_process.append({"file": audio, "type": "audio"})
+    if file and not image and not audio:
+         # Fallback logic
+        content_type = file.content_type
+        t = "unknown"
+        if content_type.startswith("image"): t = "image"
+        elif content_type.startswith("audio"): t = "audio"
+        elif content_type.startswith("video"): t = "video"
+        files_to_process.append({"file": file, "type": t})
 
-        # Save File
-        file_extension = os.path.splitext(file.filename)[1]
-        # If no extension (e.g. blob), guess based on mime
+    saved_evidence = []
+    final_description = description
+    final_contact_info = contact_info
+
+    # 1. Process files and save to disk
+    for item in files_to_process:
+        f = item["file"]
+        t = item["type"]
+
+        file_extension = os.path.splitext(f.filename)[1]
         if not file_extension:
-            if media_type == "audio":
-                file_extension = ".webm" # Common for web recording
-            elif media_type == "image":
-                file_extension = ".jpg"
+            if t == "audio": file_extension = ".webm"
+            elif t == "image": file_extension = ".jpg"
 
         file_name = f"{uuid.uuid4()}{file_extension}"
         file_path = os.path.join(UPLOAD_DIR, file_name)
         os.makedirs(UPLOAD_DIR, exist_ok=True)
 
         with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+            shutil.copyfileobj(f.file, buffer)
 
-    # NLU Processing if Audio
-    final_description = description
-    final_contact_info = contact_info
+        saved_evidence.append({
+            "path": file_path,
+            "type": t
+        })
 
-    if media_type == "audio" and file_path:
-        # Use Gemini to transcribe/analyze
+    # 2. Perform NLU on Audio if present
+    # Find the audio file in saved evidence
+    audio_evidence = next((e for e in saved_evidence if e["type"] == "audio"), None)
+
+    if audio_evidence:
         try:
             gemini = get_gemini()
-            # Analyze audio to extract description and contact info
-            # We do this synchronously for now to return the result,
-            # or we could do it in background and update the DB.
-            # Given the user wants "voice inputs also and convert them to nlu",
-            # implied immediate feedback or at least correct data entry.
-
-            analysis = gemini.analyze_audio_report(file_path, AudioAnalysis)
+            analysis = gemini.analyze_audio_report(audio_evidence["path"], AudioAnalysis)
 
             if not final_description:
                 final_description = analysis.description
@@ -86,7 +102,7 @@ async def create_report(
             if not final_description:
                 final_description = "[Audio Processing Failed]"
 
-    # Create Complaint
+    # 3. Create Complaint
     db_complaint = Complaint(
         description=final_description,
         source=source,
@@ -97,15 +113,16 @@ async def create_report(
     db.commit()
     db.refresh(db_complaint)
 
-    # Save Evidence Record
-    if file_path:
+    # 4. Save Evidence Records
+    for evidence in saved_evidence:
         db_evidence = Evidence(
             complaint_id=db_complaint.id,
-            file_path=file_path,
-            media_type=media_type
+            file_path=evidence["path"],
+            media_type=evidence["type"]
         )
         db.add(db_evidence)
-        db.commit()
+
+    db.commit()
 
     return {
         "id": db_complaint.id,
