@@ -7,7 +7,7 @@ from app.events.publisher import EventPublisher
 
 class RoutingWorker:
     """
-    Routing agent responsible for assigning issues to departments.
+    Routing agent responsible for assigning authority.
     """
 
     def __init__(
@@ -21,16 +21,16 @@ class RoutingWorker:
         self.publisher = publisher
 
     def handle(self, issue_id: str):
-        """
-        Process ISSUE_CLASSIFIED event.
-        """
-
         issue = self.repo.get(issue_id)
-        if not issue:
-            raise ValueError(f"Issue {issue_id} not found")
 
-        # Idempotency guard
+        # ✅ SAFE: never crash
+        if not issue:
+            print(f"[WARN] Issue {issue_id} not found, skipping routing")
+            return
+
+        # ✅ Correct state gate
         if issue.status != IssueStatus.CLASSIFIED:
+            print(f"[INFO] Issue {issue_id} not ready for routing")
             return
 
         prompt = self._build_prompt(issue)
@@ -54,20 +54,17 @@ class RoutingWorker:
         )
 
     def _build_prompt(self, issue) -> str:
-        """
-        Build a strict routing prompt for Gemini.
-        """
-        classification = issue.classification or {}
-
         return f"""
 You are a civic routing agent.
 
-Based on the issue details below, decide which department
-should handle this issue.
+Based on the issue classification and description,
+decide which authority should handle it.
 
-Issue Type: {classification.get("issue_type")}
-Severity: {classification.get("severity")}
-Hazardous: {classification.get("hazardous")}
+Issue Description:
+{issue.description}
+
+Classification:
+{issue.classification}
 
 Return ONLY valid JSON matching the RoutingDecision schema.
 No explanations.

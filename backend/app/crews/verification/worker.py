@@ -22,15 +22,19 @@ class VerificationWorker:
 
     def handle(self, issue_id: str):
         """
-        Process ISSUE_RESOLVED event.
+        Process verification after routing.
         """
 
         issue = self.repo.get(issue_id)
-        if not issue:
-            raise ValueError(f"Issue {issue_id} not found")
 
-        # Idempotency guard
-        if issue.status != IssueStatus.RESOLVED:
+        # ✅ SAFE: no crashes in event systems
+        if not issue:
+            print(f"[WARN] Issue {issue_id} not found, skipping verification")
+            return
+
+        # ✅ Correct state gate
+        if issue.status != IssueStatus.ROUTED:
+            print(f"[INFO] Issue {issue_id} not ready for verification")
             return
 
         prompt = self._build_prompt(issue)
@@ -60,13 +64,17 @@ class VerificationWorker:
         return f"""
 You are a civic verification agent.
 
-Verify whether the reported issue has been fully resolved.
+Based on the issue description, classification, and routing decision,
+determine whether the issue is suitable to be marked as VERIFIED.
 
 Issue Description:
 {issue.description}
 
-Resolution Evidence:
-{issue.verification}
+Classification:
+{issue.classification}
+
+Routing Decision:
+{issue.routing}
 
 Return ONLY valid JSON matching the VerificationResult schema.
 No explanations.

@@ -1,37 +1,27 @@
 import base64
 import json
-from fastapi import Request, HTTPException
+from fastapi import Request
 
 
-async def handle_pubsub_message(
-    request: Request,
-    handler,
-):
-    """
-    Generic handler for Pub/Sub push events.
-    """
-
+async def handle_pubsub_message(request: Request, handler):
     envelope = await request.json()
 
     if not envelope or "message" not in envelope:
-        raise HTTPException(status_code=400, detail="Invalid Pub/Sub envelope")
+        return {"status": "ignored"}
 
     message = envelope["message"]
+    data = message.get("data")
 
-    if "data" not in message:
-        raise HTTPException(status_code=400, detail="Missing message.data")
+    if not data:
+        return {"status": "ignored"}
 
-    try:
-        payload = base64.b64decode(message["data"]).decode("utf-8")
-        data = json.loads(payload)
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid base64 payload")
+    payload = json.loads(base64.b64decode(data).decode("utf-8"))
+    issue_id = payload.get("issue_id")
 
-    issue_id = data.get("issue_id")
     if not issue_id:
-        raise HTTPException(status_code=400, detail="Missing issue_id")
+        return {"status": "ignored"}
 
-    # Call the worker handler
-    await handler(issue_id)
+    # 🔥 FIX: call sync handler directly
+    handler(issue_id)
 
     return {"status": "ok"}
