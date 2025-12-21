@@ -14,15 +14,15 @@ export async function createIssue(params: {
   ) {
     throw new Error("Invalid coordinates");
   }
+const payload = {
+  image_url: imageBase64 ?? null,
+  description,
+  location: {
+    lat: Number(latitude),
+    lng: Number(longitude),
+  },
+};
 
-  const payload = {
-    image_url: imageBase64 ?? null,
-    description,
-    location: {
-      lat: latitude,
-      lng: longitude,
-    },
-  };
 
   const res = await fetch(
     "https://backend-1005385950490.us-central1.run.app/api/v1/issues",

@@ -5,7 +5,8 @@ import os
 import logging
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-
+from fastapi.responses import JSONResponse
+from fastapi import Request
 from app.api.v1.issues import router as issues_router
 from app.events.handler import handle_pubsub_message
 
@@ -50,9 +51,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.middleware("http")
+async def force_cors_on_errors(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)},
+            headers={
+                "Access-Control-Allow-Origin": "https://civicsenseai.vercel.app"
+            },
+        )
 
 app.include_router(issues_router)
 
+@app.middleware("http")
+async def force_cors_on_errors(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        return JSONResponse(
+            status_code=500,
+            content={"error": str(e)},
+            headers={
+                "Access-Control-Allow-Origin": "https://civicsenseai.vercel.app"
+            },
+        )
 
 # -------------------------
 # Factories
