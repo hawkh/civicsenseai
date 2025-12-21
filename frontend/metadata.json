@@ -1,0 +1,8 @@
+{
+  "name": "Civic Sense AI",
+  "description": "A high-trust citizen reporting platform that uses AI to transform unstructured civic complaints into standardized government data while maintaining user anonymity.",
+  "requestFramePermissions": [
+    "camera",
+    "geolocation"
+  ]
+}

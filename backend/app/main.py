@@ -42,14 +42,16 @@ app = FastAPI(title="CivicSense AI Backend")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=False,
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-
 app.include_router(issues_router)
+
+@app.get("/version")
+def get_version():
+    return {"version": "1.0.1", "cors_fix": True}
+
 
 def get_repo() -> IssueRepository:
     return IssueRepository()

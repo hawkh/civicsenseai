@@ -1,9 +1,11 @@
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, Field, conint, confloat
+from pydantic import BaseModel, conint, confloat
 
 
-
+# -------------------------
+# Enums
+# -------------------------
 
 class IssueType(str, Enum):
     POTHOLE = "pothole"
@@ -13,17 +15,21 @@ class IssueType(str, Enum):
     OTHER = "other"
 
 
-
+# -------------------------
+# Vision
+# -------------------------
 
 class VisionClassification(BaseModel):
     issue_type: IssueType
-    severity: conint(ge=1, le=10)
+    severity: conint(ge=1, le=5)
     hazardous: bool
     confidence: confloat(ge=0.0, le=1.0)
-    model_version: Optional[str] = None
+    notes: Optional[str] = None
 
 
-
+# -------------------------
+# Routing
+# -------------------------
 
 class RoutingDecision(BaseModel):
     department: str
@@ -32,7 +38,9 @@ class RoutingDecision(BaseModel):
     rationale: Optional[str] = None
 
 
-
+# -------------------------
+# Verification
+# -------------------------
 
 class VerificationResult(BaseModel):
     resolved: bool

@@ -1,64 +1,80 @@
+import os
+import logging
+
 from app.datastore.firestore import IssueRepository
 from app.services.gemini.client import GeminiClient
 from app.services.gemini.schemas import RoutingDecision
 from app.domain.models import IssueStatus
 from app.events.publisher import EventPublisher
 
+logger = logging.getLogger(__name__)
+
 
 class RoutingWorker:
     """
-    Routing agent responsible for assigning authority.
+    Routing agent responsible for assigning issues to departments.
     """
 
     def __init__(
         self,
         repo: IssueRepository,
-        gemini: GeminiClient,
-        publisher: EventPublisher,
+        gemini: GeminiClient | None,
+        publisher: EventPublisher | None,
     ):
         self.repo = repo
         self.gemini = gemini
         self.publisher = publisher
 
-    def handle(self, issue_id: str):
+    async def handle(self, issue_id: str):
         issue = self.repo.get(issue_id)
 
-        # ✅ SAFE: never crash
         if not issue:
-            print(f"[WARN] Issue {issue_id} not found, skipping routing")
+            logger.warning("Issue %s not found, skipping routing", issue_id)
             return
 
-        # ✅ Correct state gate
         if issue.status != IssueStatus.CLASSIFIED:
-            print(f"[INFO] Issue {issue_id} not ready for routing")
+            logger.info(
+                "Issue %s status=%s not eligible for routing",
+                issue_id,
+                issue.status,
+            )
             return
 
-        prompt = self._build_prompt(issue)
-
-        routing: RoutingDecision = self.gemini.generate_structured_output(
-            prompt=prompt,
-            output_schema=RoutingDecision,
-        )
+        # ✅ LOCAL_DEV shortcut
+        if os.getenv("LOCAL_DEV", "false").lower() == "true":
+            routing = RoutingDecision(
+                department="Municipal Sanitation",
+                priority=3,
+                confidence=0.90,
+                rationale="Auto-routed in local development",
+            )
+        else:
+            prompt = self._build_prompt(issue)
+            routing: RoutingDecision = self.gemini.generate_structured_output(
+                prompt=prompt,
+                output_schema=RoutingDecision,
+            )
 
         self.repo.update_status(
             issue_id=issue_id,
             new_status=IssueStatus.ROUTED,
-            updates={
-                "routing": routing.model_dump(),
-            },
+            updates={"routing": routing.model_dump()},
         )
 
-        self.publisher.publish(
-            event_type="ISSUE_ROUTED",
-            issue_id=issue_id,
-        )
+        if self.publisher:
+            self.publisher.publish(
+                event_type="ISSUE_ROUTED",
+                issue_id=issue_id,
+            )
+
+        logger.info("Issue %s routed successfully", issue_id)
 
     def _build_prompt(self, issue) -> str:
         return f"""
 You are a civic routing agent.
 
-Based on the issue classification and description,
-decide which authority should handle it.
+Based on the issue classification, decide which department
+should handle it and its priority.
 
 Issue Description:
 {issue.description}

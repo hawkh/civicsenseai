@@ -1,9 +1,14 @@
+import os
+import logging
+
 from app.datastore.firestore import IssueRepository
 from app.services.gemini.client import GeminiClient
 from app.services.gemini.schemas import VerificationResult
 from app.domain.models import IssueStatus
 from app.events.publisher import EventPublisher
-import os
+
+
+logger = logging.getLogger(__name__)
 
 
 class VerificationWorker:
@@ -28,20 +33,18 @@ class VerificationWorker:
 
         issue = self.repo.get(issue_id)
 
-        # ✅ Event-safe: never crash
         if not issue:
-            print(f"[WARN] Issue {issue_id} not found, skipping verification")
+            logger.warning("Issue %s not found, skipping verification", issue_id)
             return
 
-        # ✅ Correct state gate
         if issue.status != IssueStatus.ROUTED:
-            print(
-                f"[INFO] Issue {issue_id} status={issue.status}, "
-                f"not ready for verification"
+            logger.info(
+                "Issue %s status=%s not ready for verification",
+                issue_id,
+                issue.status,
             )
             return
 
-        # ✅ LOCAL DEV shortcut (no Gemini dependency)
         if os.getenv("LOCAL_DEV", "false").lower() == "true":
             verification = VerificationResult(
                 verified=True,
@@ -55,7 +58,6 @@ class VerificationWorker:
                 output_schema=VerificationResult,
             )
 
-        # ✅ Advance state → VERIFIED
         self.repo.update_status(
             issue_id=issue_id,
             new_status=IssueStatus.VERIFIED,
@@ -67,7 +69,7 @@ class VerificationWorker:
             issue_id=issue_id,
         )
 
-        print(f"[OK] Issue {issue_id} verified")
+        logger.info("Issue %s successfully verified", issue_id)
 
     def _build_prompt(self, issue) -> str:
         """
