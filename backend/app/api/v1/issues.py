@@ -13,12 +13,6 @@ router = APIRouter(prefix="/api/v1/issues", tags=["issues"])
 LOCAL_DEV = os.getenv("LOCAL_DEV", "false").lower() == "true"
 
 
-# ✅ REQUIRED FOR BROWSER PREFLIGHT
-@router.options("")
-def options_issues():
-    return Response(status_code=200)
-
-
 def get_repo():
     return IssueRepository()
 
