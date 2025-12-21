@@ -1,11 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException
 import uuid
 import os
 from typing import List
-import logging
-
-logger = logging.getLogger(__name__)
-
 
 from app.domain.models import Issue, IssueStatus
 from app.domain.schemas import IssueCreateRequest, IssueCreateResponse
@@ -25,8 +21,8 @@ def get_publisher():
     if LOCAL_DEV:
         return None
     return EventPublisher(
-        project_id="civicsense-481806",
-        topic_name="civicsense",
+        project_id=os.getenv("GCP_PROJECT_ID"),
+        topic_name=os.getenv("PUBSUB_TOPIC"),
     )
 
 
@@ -34,38 +30,37 @@ def get_publisher():
 def create_issue(
     payload: IssueCreateRequest,
     repo: IssueRepository = Depends(get_repo),
-    publisher: EventPublisher = Depends(get_publisher),
+    publisher: EventPublisher | None = Depends(get_publisher),
 ):
-    try:
-        issue_id = f"ISSUE_{uuid.uuid4().hex[:8]}"
+    issue_id = f"ISSUE_{uuid.uuid4().hex[:8]}"
 
-        issue = Issue(
+    issue = Issue(
+        issue_id=issue_id,
+        location=payload.location,
+        description=payload.description,
+        image_url=payload.image_url,
+        status=IssueStatus.SUBMITTED,
+    )
+
+    repo.create(issue)
+
+    if publisher:
+        publisher.publish(
+            event_type="ISSUE_SUBMITTED",
             issue_id=issue_id,
-            location=payload.location,
-            description=payload.description,
-            image_url=payload.image_url,
-            status=IssueStatus.SUBMITTED,
         )
 
-        repo.create(issue)
+    return IssueCreateResponse(
+        issue_id=issue_id,
+        status=issue.status,
+    )
 
-        if publisher:
-            publisher.publish(
-                event_type="ISSUE_SUBMITTED",
-                issue_id=issue_id,
-            )
-
-        return IssueCreateResponse(
-            issue_id=issue_id,
-            status=issue.status,
-        )
-
-    except Exception as e:
-        logger.exception("Failed to create issue")
-        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{issue_id}", response_model=Issue)
-def get_issue(issue_id: str, repo: IssueRepository = Depends(get_repo)):
+def get_issue(
+    issue_id: str,
+    repo: IssueRepository = Depends(get_repo),
+):
     issue = repo.get(issue_id)
     if not issue:
         raise HTTPException(status_code=404, detail="Issue not found")
