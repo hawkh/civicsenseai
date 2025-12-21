@@ -6,15 +6,12 @@ ENV PORT=8080
 
 WORKDIR /app
 
-# requirements.txt IS in backend/
-COPY requirements.txt .
-
+# 👇 COPY FROM backend folder explicitly
+COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# app/ is in backend/
-COPY app ./app
-
-EXPOSE 8080
+# 👇 Copy backend app code
+COPY backend/app ./app
 
 CMD exec uvicorn app.main:app \
   --host 0.0.0.0 \
