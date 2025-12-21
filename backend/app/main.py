@@ -38,14 +38,18 @@ else:
 
 app = FastAPI(title="CivicSense AI Backend")
 
-# ✅ CORS FIX (THIS IS CRITICAL)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten later
-    allow_credentials=True,
+    allow_origins=[
+        "https://civicsenseai.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 app.include_router(issues_router)
 
