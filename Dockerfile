@@ -6,20 +6,18 @@ ENV PORT=8080
 
 WORKDIR /app
 
-# Install dependencies
+# requirements.txt IS in backend/
 COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# app/ is in backend/
 COPY app ./app
 
-# Cloud Run port
 EXPOSE 8080
 
-# Run FastAPI with Uvicorn (Cloud Run safe)
 CMD exec uvicorn app.main:app \
   --host 0.0.0.0 \
   --port $PORT \
   --proxy-headers \
   --forwarded-allow-ips "*"
-
