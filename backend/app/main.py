@@ -5,7 +5,7 @@ import logging
 from fastapi import FastAPI, Request, APIRouter, Response
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.issues import router as issues_router
+
 from app.events.handler import handle_pubsub_message
 
 from app.crews.vision.worker import VisionWorker
@@ -46,6 +46,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+from app.api.v1.issues import router as issues_router
 app.include_router(issues_router)
 
 @app.get("/version")
