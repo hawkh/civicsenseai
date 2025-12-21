@@ -38,7 +38,6 @@ else:
 
 app = FastAPI(title="CivicSense AI Backend")
 
-# ✅ CORS (works now)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # tighten later

@@ -1,5 +1,8 @@
-
 FROM python:3.11-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8080
 
 WORKDIR /app
 
@@ -8,12 +11,15 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
-COPY . .
+COPY app ./app
 
-# Environment variables
-ENV PORT=8080
+# Cloud Run port
+EXPOSE 8080
 
-# Command to run uvicorn with proxy headers enabled
-# --proxy-headers is CRITICAL for Cloud Run to trust the ingress headers
-# --forwarded-allow-ips "*" is CRITICAL to trust the load balancer/proxy IPs
-CMD exec uvicorn app.main:app --host 0.0.0.0 --port $PORT --proxy-headers --forwarded-allow-ips "*"
+# Run FastAPI with Uvicorn (Cloud Run safe)
+CMD exec uvicorn app.main:app \
+  --host 0.0.0.0 \
+  --port $PORT \
+  --proxy-headers \
+  --forwarded-allow-ips "*"
+
