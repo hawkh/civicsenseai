@@ -2,6 +2,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 import uuid
 import os
 from typing import List
+import logging
+
+logger = logging.getLogger(__name__)
+
 
 from app.domain.models import Issue, IssueStatus
 from app.domain.schemas import IssueCreateRequest, IssueCreateResponse
@@ -32,29 +36,33 @@ def create_issue(
     repo: IssueRepository = Depends(get_repo),
     publisher: EventPublisher = Depends(get_publisher),
 ):
-    issue_id = f"ISSUE_{uuid.uuid4().hex[:8]}"
+    try:
+        issue_id = f"ISSUE_{uuid.uuid4().hex[:8]}"
 
-    issue = Issue(
-        issue_id=issue_id,
-        location=payload.location,
-        description=payload.description,
-        image_url=payload.image_url,
-        status=IssueStatus.SUBMITTED,
-    )
-
-    repo.create(issue)
-
-    if publisher:
-        publisher.publish(
-            event_type="ISSUE_SUBMITTED",
+        issue = Issue(
             issue_id=issue_id,
+            location=payload.location,
+            description=payload.description,
+            image_url=payload.image_url,
+            status=IssueStatus.SUBMITTED,
         )
 
-    return IssueCreateResponse(
-        issue_id=issue_id,
-        status=issue.status,
-    )
+        repo.create(issue)
 
+        if publisher:
+            publisher.publish(
+                event_type="ISSUE_SUBMITTED",
+                issue_id=issue_id,
+            )
+
+        return IssueCreateResponse(
+            issue_id=issue_id,
+            status=issue.status,
+        )
+
+    except Exception as e:
+        logger.exception("Failed to create issue")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{issue_id}", response_model=Issue)
 def get_issue(issue_id: str, repo: IssueRepository = Depends(get_repo)):

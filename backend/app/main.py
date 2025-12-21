@@ -3,8 +3,9 @@ load_dotenv()
 
 import os
 import logging
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from app.api.v1.issues import router as issues_router
 from app.events.handler import handle_pubsub_message
@@ -17,13 +18,18 @@ from app.datastore.firestore import IssueRepository
 from app.services.gemini.client import GeminiClient
 from app.events.publisher import EventPublisher
 
+# --------------------------------------------------
+# Logging
+# --------------------------------------------------
 logging.basicConfig(
     level=logging.INFO,
     format="%(levelname)s:%(name)s:%(message)s",
 )
-
 logger = logging.getLogger(__name__)
 
+# --------------------------------------------------
+# Env
+# --------------------------------------------------
 LOCAL_DEV = os.getenv("LOCAL_DEV", "false").lower() == "true"
 PROJECT_ID = os.getenv("GCP_PROJECT_ID")
 PUBSUB_TOPIC = os.getenv("PUBSUB_TOPIC")
@@ -36,36 +42,65 @@ if not LOCAL_DEV:
 else:
     logger.info("Running in LOCAL_DEV mode")
 
+# --------------------------------------------------
+# App
+# --------------------------------------------------
 app = FastAPI(title="CivicSense AI Backend")
 
+# --------------------------------------------------
+# CORS (FIXED)
+# --------------------------------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://civicsenseai.vercel.app"
+        "https://civicsenseai.vercel.app",
+        "https://www.civicsenseai.vercel.app",
     ],
-    allow_credentials=False,
+    allow_credentials=False,   # correct since frontend uses no cookies
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# --------------------------------------------------
+# ENSURE CORS EVEN ON ERRORS (CRITICAL FOR CLOUD RUN)
+# --------------------------------------------------
+@app.middleware("http")
+async def force_cors_on_errors(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        logger.exception("Unhandled exception")
 
+        response = JSONResponse(
+            status_code=500,
+            content={"detail": "Internal Server Error"},
+        )
+        response.headers["Access-Control-Allow-Origin"] = request.headers.get(
+            "origin", "*"
+        )
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "*"
+        return response
+
+# --------------------------------------------------
+# Routes
+# --------------------------------------------------
 app.include_router(issues_router)
-
 
 @app.get("/version")
 def version():
     return {"version": "1.0.0", "local_dev": LOCAL_DEV}
 
-
+# --------------------------------------------------
+# Dependencies
+# --------------------------------------------------
 def get_repo():
     return IssueRepository()
-
 
 def get_gemini():
     if LOCAL_DEV:
         return None
     return GeminiClient(project_id=PROJECT_ID)
-
 
 def get_publisher():
     if LOCAL_DEV:
@@ -75,7 +110,9 @@ def get_publisher():
         topic_name=PUBSUB_TOPIC,
     )
 
-
+# --------------------------------------------------
+# Event handlers
+# --------------------------------------------------
 @app.post("/events/vision")
 async def vision_event(request: Request):
     worker = VisionWorker(
@@ -85,7 +122,6 @@ async def vision_event(request: Request):
     )
     return await handle_pubsub_message(request, worker.handle)
 
-
 @app.post("/events/routing")
 async def routing_event(request: Request):
     worker = RoutingWorker(
@@ -94,7 +130,6 @@ async def routing_event(request: Request):
         publisher=get_publisher(),
     )
     return await handle_pubsub_message(request, worker.handle)
-
 
 @app.post("/events/verification")
 async def verification_event(request: Request):
