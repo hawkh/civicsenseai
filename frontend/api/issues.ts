@@ -1,22 +1,26 @@
 export async function createIssue(params: {
-  imageBase64: string;
+  imageBase64?: string;
   description: string;
   latitude: number;
   longitude: number;
 }) {
+  const { imageBase64, description, latitude, longitude } = params;
+
   if (
-    typeof params.latitude !== "number" ||
-    typeof params.longitude !== "number"
+    typeof latitude !== "number" ||
+    typeof longitude !== "number" ||
+    Number.isNaN(latitude) ||
+    Number.isNaN(longitude)
   ) {
     throw new Error("Invalid coordinates");
   }
 
   const payload = {
-    image_url: params.imageBase64,
-    description: params.description,
+    image_url: imageBase64 ?? null,
+    description,
     location: {
-      lat: params.latitude,
-      lng: params.longitude,
+      lat: latitude,
+      lng: longitude,
     },
   };
 
@@ -33,7 +37,7 @@ export async function createIssue(params: {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(text);
+    throw new Error(text || "Issue creation failed");
   }
 
   return await res.json();
