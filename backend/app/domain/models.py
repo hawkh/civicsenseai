@@ -32,30 +32,28 @@ def can_transition(from_status: IssueStatus, to_status: IssueStatus) -> bool:
 
 
 
+from typing import Optional
+
 class Issue(BaseModel):
     """
     Core domain model.
     This is the single source of truth for system behavior.
     """
 
-    # Identity
     issue_id: str
-
-    # State
     status: IssueStatus = IssueStatus.SUBMITTED
 
-    # User-provided input
-    location: Dict[str, float]  # { "lat": float, "lng": float }
+    location: Dict[str, float]
     description: str
-    image_url: str
+    image_url: Optional[str] = None  # ✅ FIX
 
-    # AI / Agent outputs (progressively filled)
     classification: Optional[Dict[str, Any]] = None
     routing: Optional[Dict[str, Any]] = None
     verification: Optional[Dict[str, Any]] = None
 
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
+
 
 
     def transition_to(self, new_status: IssueStatus):
