@@ -1,17 +1,17 @@
+
 from pydantic import BaseModel, Field
-from typing import Dict, Optional
+from typing import Optional
+
+
+class LocationSchema(BaseModel):
+    lat: float = Field(..., ge=-90, le=90)
+    lng: float = Field(..., ge=-180, le=180)
 
 
 class IssueCreateRequest(BaseModel):
-    location: Dict[str, float] = Field(
-        ..., example={"lat": 17.44, "lng": 78.34}
-    )
-    description: str = Field(
-        ..., example="Large pothole near the bus stop"
-    )
-    image_url: Optional[str] = Field(
-        None, example="gs://civicsense-uploads/image.png"
-    )
+    location: LocationSchema
+    description: str = Field(..., min_length=3)
+    image_url: Optional[str] = None
 
 
 class IssueCreateResponse(BaseModel):
