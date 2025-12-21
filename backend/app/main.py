@@ -48,16 +48,12 @@ app.add_middleware(
 )
 
 
+
 app.include_router(issues_router)
-
-router = APIRouter(prefix="/api/v1/issues")
-
-@router.options("")
-async def options_issues():
-    return Response(status_code=204)
 
 def get_repo() -> IssueRepository:
     return IssueRepository()
+
 
 def get_gemini() -> GeminiClient | None:
     if LOCAL_DEV:
