@@ -4,13 +4,20 @@ from google.cloud import firestore
 from app.domain.models import Issue
 
 
+_client = None
+
+
 class IssueRepository:
     def __init__(self):
+        global _client
         project_id = os.getenv("GCP_PROJECT_ID")
         if not project_id:
             raise RuntimeError("GCP_PROJECT_ID not set")
 
-        self.client = firestore.Client(project=project_id)
+        if _client is None:
+            _client = firestore.Client(project=project_id)
+
+        self.client = _client
         self.collection = self.client.collection("issues")
 
     def create(self, issue: Issue):
