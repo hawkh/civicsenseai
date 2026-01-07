@@ -1,16 +1,24 @@
 
 import os
+from typing import Optional
 from google.cloud import firestore
 from app.domain.models import Issue
 
+# Singleton instance
+_client: Optional[firestore.Client] = None
 
-class IssueRepository:
-    def __init__(self):
+def _get_client() -> firestore.Client:
+    global _client
+    if _client is None:
         project_id = os.getenv("GCP_PROJECT_ID")
         if not project_id:
             raise RuntimeError("GCP_PROJECT_ID not set")
+        _client = firestore.Client(project=project_id)
+    return _client
 
-        self.client = firestore.Client(project=project_id)
+class IssueRepository:
+    def __init__(self):
+        self.client = _get_client()
         self.collection = self.client.collection("issues")
 
     def create(self, issue: Issue):
