@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppState, CivicIssue, User, IssueStatus } from './types';
 import AuthScreen from './components/AuthScreen';
 import HomeScreen from './components/HomeScreen';
@@ -15,17 +15,21 @@ const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [issues, setIssues] = useState<CivicIssue[]>([]);
   const [selectedIssue, setSelectedIssue] = useState<CivicIssue | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('civic_issues');
     if (saved) {
       setIssues(JSON.parse(saved));
     }
+    setIsLoaded(true);
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('civic_issues', JSON.stringify(issues));
-  }, [issues]);
+    if (isLoaded) {
+      localStorage.setItem('civic_issues', JSON.stringify(issues));
+    }
+  }, [issues, isLoaded]);
 
 useEffect(() => {
   if (issues.length === 0) return;
@@ -80,10 +84,10 @@ useEffect(() => {
     setCurrentPage(page);
   };
 
-  const openIssueDetail = (issue: CivicIssue) => {
+  const openIssueDetail = useCallback((issue: CivicIssue) => {
     setSelectedIssue(issue);
     setCurrentPage(AppState.ISSUE_DETAIL);
-  };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
