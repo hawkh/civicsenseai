@@ -3,14 +3,27 @@ import os
 from google.cloud import firestore
 from app.domain.models import Issue
 
+# Global variable to cache the Firestore client
+_firestore_client = None
 
-class IssueRepository:
-    def __init__(self):
+def get_firestore_client():
+    """
+    Returns a cached Firestore client instance.
+    Initializes it if it hasn't been created yet.
+    """
+    global _firestore_client
+    if _firestore_client is None:
         project_id = os.getenv("GCP_PROJECT_ID")
         if not project_id:
             raise RuntimeError("GCP_PROJECT_ID not set")
 
-        self.client = firestore.Client(project=project_id)
+        _firestore_client = firestore.Client(project=project_id)
+
+    return _firestore_client
+
+class IssueRepository:
+    def __init__(self):
+        self.client = get_firestore_client()
         self.collection = self.client.collection("issues")
 
     def create(self, issue: Issue):
