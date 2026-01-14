@@ -20,6 +20,8 @@ export enum IssueStatus {
   SUBMITTED = "submitted",
   CLASSIFIED = "classified",
   ROUTED = "routed",
+  IN_PROGRESS = "in_progress",
+  RESOLVED = "resolved",
   VERIFIED = "verified",
 }
 
@@ -30,6 +32,10 @@ export interface CivicIssue {
   location: Location;
   status: IssueStatus;
   created_at?: string;
+  image?: string;
+  category?: string;
+  severity?: string;
+  department?: string;
 }
 
 
