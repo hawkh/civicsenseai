@@ -91,16 +91,14 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
     setIsSubmitting(true);
 
     try {
+      // Flatten location for API
+      const finalLocation = location ?? { latitude: 0, longitude: 0 };
+
       const apiResult = await createIssue({
         imageBase64: image,
         description: description || "No description provided",
-        location:
-          location ??
-          ({
-            latitude: 0,
-            longitude: 0,
-            address: addressInput,
-          } as Location),
+        latitude: finalLocation.latitude,
+        longitude: finalLocation.longitude,
       });
 
       // 🔑 Backend is source of truth
