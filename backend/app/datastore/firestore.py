@@ -3,6 +3,10 @@ import os
 from google.cloud import firestore
 from app.domain.models import Issue
 
+# Module-level singleton to prevent expensive re-initialization of Firestore client
+# on every request. This is critical for performance as Client init involves
+# auth and connection setup.
+_client_instance = None
 
 class IssueRepository:
     def __init__(self):
@@ -10,7 +14,11 @@ class IssueRepository:
         if not project_id:
             raise RuntimeError("GCP_PROJECT_ID not set")
 
-        self.client = firestore.Client(project=project_id)
+        global _client_instance
+        if _client_instance is None:
+            _client_instance = firestore.Client(project=project_id)
+
+        self.client = _client_instance
         self.collection = self.client.collection("issues")
 
     def create(self, issue: Issue):
