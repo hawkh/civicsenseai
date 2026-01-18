@@ -21,30 +21,20 @@ export enum IssueStatus {
   CLASSIFIED = "classified",
   ROUTED = "routed",
   VERIFIED = "verified",
+  RESOLVED = "resolved",
+  IN_PROGRESS = "in_progress"
 }
 
 export interface CivicIssue {
   id: string;
   description: string;
   image_url: string;
+  // DashboardScreen uses .image
+  image?: string;
   location: Location;
   status: IssueStatus;
-  created_at?: string;
-}
-
-
-export interface Location {
-  latitude: number;
-  longitude: number;
-  address?: string;
-}
-
-export interface CivicIssue {
-  id: string;
-  description: string;
-  image_url: string;
-  location: Location;
-  status: IssueStatus;
+  // DashboardScreen uses .category
+  category?: string;
   created_at?: string;
 }
 
