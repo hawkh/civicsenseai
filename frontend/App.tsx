@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppState, CivicIssue, User, IssueStatus } from './types';
 import AuthScreen from './components/AuthScreen';
 import HomeScreen from './components/HomeScreen';
@@ -36,7 +36,7 @@ useEffect(() => {
       const issue = prevIssues[indexToUpdate];
       if (!issue || issue.status === IssueStatus.VERIFIED) return prevIssues;
 
-      let nextStatus = issue.status;
+      let nextStatus: IssueStatus = issue.status;
 
       if (issue.status === IssueStatus.SUBMITTED) {
         nextStatus = IssueStatus.CLASSIFIED;
@@ -80,10 +80,10 @@ useEffect(() => {
     setCurrentPage(page);
   };
 
-  const openIssueDetail = (issue: CivicIssue) => {
+  const openIssueDetail = useCallback((issue: CivicIssue) => {
     setSelectedIssue(issue);
     setCurrentPage(AppState.ISSUE_DETAIL);
-  };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
