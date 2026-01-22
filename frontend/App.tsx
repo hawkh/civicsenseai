@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppState, CivicIssue, User, IssueStatus } from './types';
 import AuthScreen from './components/AuthScreen';
 import HomeScreen from './components/HomeScreen';
@@ -10,54 +10,77 @@ import ProfileScreen from './components/ProfileScreen';
 import IssueDetailScreen from './components/IssueDetailScreen';
 import { Plus, LayoutGrid, User as UserIcon, Shield, Sparkles } from 'lucide-react';
 
+interface NavItemProps {
+  page: AppState;
+  icon: any;
+  label: string;
+  isActive: boolean;
+  onClick: (page: AppState) => void;
+}
+
+const NavItem: React.FC<NavItemProps> = ({ page, icon: Icon, label, isActive, onClick }) => {
+  return (
+    <button
+      onClick={() => onClick(page)}
+      className={`flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-300 w-full ${
+        isActive
+          ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200'
+          : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
+      }`}
+    >
+      <Icon size={20} />
+      <span className="text-sm font-bold tracking-tight">{label}</span>
+    </button>
+  );
+};
+
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<AppState>(AppState.AUTH);
   const [user, setUser] = useState<User | null>(null);
-  const [issues, setIssues] = useState<CivicIssue[]>([]);
-  const [selectedIssue, setSelectedIssue] = useState<CivicIssue | null>(null);
 
-  useEffect(() => {
+  // Lazy initialization for issues
+  const [issues, setIssues] = useState<CivicIssue[]>(() => {
     const saved = localStorage.getItem('civic_issues');
-    if (saved) {
-      setIssues(JSON.parse(saved));
-    }
-  }, []);
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  const [selectedIssue, setSelectedIssue] = useState<CivicIssue | null>(null);
 
   useEffect(() => {
     localStorage.setItem('civic_issues', JSON.stringify(issues));
   }, [issues]);
 
-useEffect(() => {
-  if (issues.length === 0) return;
+  useEffect(() => {
+    if (issues.length === 0) return;
 
-  const interval = setInterval(() => {
-    setIssues(prevIssues => {
-      const indexToUpdate = Math.floor(Math.random() * prevIssues.length);
-      const issue = prevIssues[indexToUpdate];
-      if (!issue || issue.status === IssueStatus.VERIFIED) return prevIssues;
+    const interval = setInterval(() => {
+      setIssues(prevIssues => {
+        const indexToUpdate = Math.floor(Math.random() * prevIssues.length);
+        const issue = prevIssues[indexToUpdate];
+        if (!issue || issue.status === IssueStatus.VERIFIED) return prevIssues;
 
-      let nextStatus = issue.status;
+        let nextStatus = issue.status;
 
-      if (issue.status === IssueStatus.SUBMITTED) {
-        nextStatus = IssueStatus.CLASSIFIED;
-      } else if (issue.status === IssueStatus.CLASSIFIED) {
-        nextStatus = IssueStatus.ROUTED;
-      } else if (issue.status === IssueStatus.ROUTED) {
-        if (Math.random() > 0.8) {
-          nextStatus = IssueStatus.VERIFIED;
+        if (issue.status === IssueStatus.SUBMITTED) {
+          nextStatus = IssueStatus.CLASSIFIED;
+        } else if (issue.status === IssueStatus.CLASSIFIED) {
+          nextStatus = IssueStatus.ROUTED;
+        } else if (issue.status === IssueStatus.ROUTED) {
+          if (Math.random() > 0.8) {
+            nextStatus = IssueStatus.VERIFIED;
+          }
         }
-      }
 
-      if (nextStatus === issue.status) return prevIssues;
+        if (nextStatus === issue.status) return prevIssues;
 
-      const updated = [...prevIssues];
-      updated[indexToUpdate] = { ...issue, status: nextStatus };
-      return updated;
-    });
-  }, 15000);
+        const updated = [...prevIssues];
+        updated[indexToUpdate] = { ...issue, status: nextStatus };
+        return updated;
+      });
+    }, 15000);
 
-  return () => clearInterval(interval);
-}, [issues.length]);
+    return () => clearInterval(interval);
+  }, [issues.length]);
 
 
   const handleLogin = (newUser: User) => {
@@ -80,10 +103,10 @@ useEffect(() => {
     setCurrentPage(page);
   };
 
-  const openIssueDetail = (issue: CivicIssue) => {
+  const openIssueDetail = useCallback((issue: CivicIssue) => {
     setSelectedIssue(issue);
     setCurrentPage(AppState.ISSUE_DETAIL);
-  };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
@@ -108,23 +131,6 @@ useEffect(() => {
   const isFullScreenPage = [AppState.AUTH, AppState.REPORT, AppState.SUCCESS, AppState.ISSUE_DETAIL].includes(currentPage);
   const showNav = !isFullScreenPage;
 
-  const NavItem = ({ page, icon: Icon, label }: { page: AppState, icon: any, label: string }) => {
-    const active = currentPage === page;
-    return (
-      <button 
-        onClick={() => navigate(page)}
-        className={`flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-300 w-full ${
-          active 
-            ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200' 
-            : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
-        }`}
-      >
-        <Icon size={20} />
-        <span className="text-sm font-bold tracking-tight">{label}</span>
-      </button>
-    );
-  };
-
   return (
     <div className="fixed inset-0 flex flex-col md:flex-row bg-[#F8FAFF] overflow-hidden font-sans">
       {/* Sidebar - Desktop */}
@@ -141,9 +147,27 @@ useEffect(() => {
           </div>
           
           <nav className="flex-1 space-y-3">
-            <NavItem page={AppState.HOME} icon={Sparkles} label="New Report" />
-            <NavItem page={AppState.DASHBOARD} icon={LayoutGrid} label="My Dashboard" />
-            <NavItem page={AppState.PROFILE} icon={UserIcon} label="Digital ID" />
+            <NavItem
+              page={AppState.HOME}
+              icon={Sparkles}
+              label="New Report"
+              isActive={currentPage === AppState.HOME}
+              onClick={navigate}
+            />
+            <NavItem
+              page={AppState.DASHBOARD}
+              icon={LayoutGrid}
+              label="My Dashboard"
+              isActive={currentPage === AppState.DASHBOARD}
+              onClick={navigate}
+            />
+            <NavItem
+              page={AppState.PROFILE}
+              icon={UserIcon}
+              label="Digital ID"
+              isActive={currentPage === AppState.PROFILE}
+              onClick={navigate}
+            />
           </nav>
         </aside>
       )}
