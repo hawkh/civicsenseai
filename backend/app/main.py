@@ -3,10 +3,10 @@ load_dotenv()
 
 import os
 import logging
+from functools import lru_cache
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi import Request
 from app.api.v1.issues import router as issues_router
 from app.events.handler import handle_pubsub_message
 
@@ -83,7 +83,9 @@ async def force_cors_on_errors(request: Request, call_next):
 # Factories
 # -------------------------
 
+@lru_cache()
 def get_repo() -> IssueRepository:
+    # ⚡ Optimization: Singleton pattern for repository to pool Firestore connections
     return IssueRepository()
 
 def get_gemini() -> GeminiClient | None:

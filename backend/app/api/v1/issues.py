@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from functools import lru_cache
 import uuid
 import os
 from typing import List
+
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.domain.models import Issue, IssueStatus
 from app.domain.schemas import IssueCreateRequest, IssueCreateResponse
@@ -15,7 +17,10 @@ LOCAL_DEV = os.getenv("LOCAL_DEV", "false").lower() == "true"
 router = APIRouter(prefix="/api/v1/issues", tags=["issues"])
 
 
+@lru_cache()
 def get_repo():
+    # ⚡ Optimization: Reuse the repository instance (and Firestore client)
+    # across requests to avoid expensive connection overhead.
     return IssueRepository()
 
 
