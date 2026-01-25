@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AppState, CivicIssue, User, IssueStatus } from './types';
 import AuthScreen from './components/AuthScreen';
 import HomeScreen from './components/HomeScreen';
@@ -9,6 +9,34 @@ import SuccessScreen from './components/SuccessScreen';
 import ProfileScreen from './components/ProfileScreen';
 import IssueDetailScreen from './components/IssueDetailScreen';
 import { Plus, LayoutGrid, User as UserIcon, Shield, Sparkles } from 'lucide-react';
+
+interface NavItemProps {
+  page: AppState;
+  isActive: boolean;
+  onNavigate: (page: AppState) => void;
+  icon: React.ElementType;
+  label: string;
+}
+
+/**
+ * NavItem component extracted to prevent re-definition on every App render.
+ * Memoized to prevent unnecessary re-renders when other App state changes.
+ */
+const NavItem = React.memo(({ page, isActive, onNavigate, icon: Icon, label }: NavItemProps) => {
+  return (
+    <button
+      onClick={() => onNavigate(page)}
+      className={`flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-300 w-full ${
+        isActive
+          ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200'
+          : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
+      }`}
+    >
+      <Icon size={20} />
+      <span className="text-sm font-bold tracking-tight">{label}</span>
+    </button>
+  );
+});
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<AppState>(AppState.AUTH);
@@ -76,9 +104,9 @@ useEffect(() => {
     setCurrentPage(AppState.DASHBOARD);
   };
 
-  const navigate = (page: AppState) => {
+  const navigate = useCallback((page: AppState) => {
     setCurrentPage(page);
-  };
+  }, []);
 
   const openIssueDetail = (issue: CivicIssue) => {
     setSelectedIssue(issue);
@@ -108,23 +136,6 @@ useEffect(() => {
   const isFullScreenPage = [AppState.AUTH, AppState.REPORT, AppState.SUCCESS, AppState.ISSUE_DETAIL].includes(currentPage);
   const showNav = !isFullScreenPage;
 
-  const NavItem = ({ page, icon: Icon, label }: { page: AppState, icon: any, label: string }) => {
-    const active = currentPage === page;
-    return (
-      <button 
-        onClick={() => navigate(page)}
-        className={`flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-300 w-full ${
-          active 
-            ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200' 
-            : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
-        }`}
-      >
-        <Icon size={20} />
-        <span className="text-sm font-bold tracking-tight">{label}</span>
-      </button>
-    );
-  };
-
   return (
     <div className="fixed inset-0 flex flex-col md:flex-row bg-[#F8FAFF] overflow-hidden font-sans">
       {/* Sidebar - Desktop */}
@@ -141,9 +152,27 @@ useEffect(() => {
           </div>
           
           <nav className="flex-1 space-y-3">
-            <NavItem page={AppState.HOME} icon={Sparkles} label="New Report" />
-            <NavItem page={AppState.DASHBOARD} icon={LayoutGrid} label="My Dashboard" />
-            <NavItem page={AppState.PROFILE} icon={UserIcon} label="Digital ID" />
+            <NavItem
+              page={AppState.HOME}
+              isActive={currentPage === AppState.HOME}
+              onNavigate={navigate}
+              icon={Sparkles}
+              label="New Report"
+            />
+            <NavItem
+              page={AppState.DASHBOARD}
+              isActive={currentPage === AppState.DASHBOARD}
+              onNavigate={navigate}
+              icon={LayoutGrid}
+              label="My Dashboard"
+            />
+            <NavItem
+              page={AppState.PROFILE}
+              isActive={currentPage === AppState.PROFILE}
+              onNavigate={navigate}
+              icon={UserIcon}
+              label="Digital ID"
+            />
           </nav>
         </aside>
       )}
