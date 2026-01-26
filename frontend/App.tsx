@@ -8,6 +8,7 @@ import DashboardScreen from './components/DashboardScreen';
 import SuccessScreen from './components/SuccessScreen';
 import ProfileScreen from './components/ProfileScreen';
 import IssueDetailScreen from './components/IssueDetailScreen';
+import NavItem from './components/NavItem';
 import { Plus, LayoutGrid, User as UserIcon, Shield, Sparkles } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -108,23 +109,6 @@ useEffect(() => {
   const isFullScreenPage = [AppState.AUTH, AppState.REPORT, AppState.SUCCESS, AppState.ISSUE_DETAIL].includes(currentPage);
   const showNav = !isFullScreenPage;
 
-  const NavItem = ({ page, icon: Icon, label }: { page: AppState, icon: any, label: string }) => {
-    const active = currentPage === page;
-    return (
-      <button 
-        onClick={() => navigate(page)}
-        className={`flex items-center gap-3 px-5 py-3 rounded-2xl transition-all duration-300 w-full ${
-          active 
-            ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200' 
-            : 'text-slate-400 hover:text-indigo-600 hover:bg-indigo-50'
-        }`}
-      >
-        <Icon size={20} />
-        <span className="text-sm font-bold tracking-tight">{label}</span>
-      </button>
-    );
-  };
-
   return (
     <div className="fixed inset-0 flex flex-col md:flex-row bg-[#F8FAFF] overflow-hidden font-sans">
       {/* Sidebar - Desktop */}
@@ -141,9 +125,24 @@ useEffect(() => {
           </div>
           
           <nav className="flex-1 space-y-3">
-            <NavItem page={AppState.HOME} icon={Sparkles} label="New Report" />
-            <NavItem page={AppState.DASHBOARD} icon={LayoutGrid} label="My Dashboard" />
-            <NavItem page={AppState.PROFILE} icon={UserIcon} label="Digital ID" />
+            <NavItem
+              onClick={() => navigate(AppState.HOME)}
+              isActive={currentPage === AppState.HOME}
+              icon={Sparkles}
+              label="New Report"
+            />
+            <NavItem
+              onClick={() => navigate(AppState.DASHBOARD)}
+              isActive={currentPage === AppState.DASHBOARD}
+              icon={LayoutGrid}
+              label="My Dashboard"
+            />
+            <NavItem
+              onClick={() => navigate(AppState.PROFILE)}
+              isActive={currentPage === AppState.PROFILE}
+              icon={UserIcon}
+              label="Digital ID"
+            />
           </nav>
         </aside>
       )}
