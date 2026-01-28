@@ -3,8 +3,9 @@ export async function createIssue(params: {
   description: string;
   latitude: number;
   longitude: number;
+  address?: string;
 }) {
-  const { imageBase64, description, latitude, longitude } = params;
+  const { imageBase64, description, latitude, longitude, address } = params;
 
   if (
     typeof latitude !== "number" ||
@@ -20,6 +21,7 @@ const payload = {
   location: {
     lat: Number(latitude),
     lng: Number(longitude),
+    address,
   },
 };
 
