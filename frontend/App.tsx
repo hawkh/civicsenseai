@@ -1,15 +1,17 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { AppState, CivicIssue, User, IssueStatus } from './types';
 import AuthScreen from './components/AuthScreen';
-import HomeScreen from './components/HomeScreen';
-import ReportScreen from './components/ReportScreen';
-import DashboardScreen from './components/DashboardScreen';
-import SuccessScreen from './components/SuccessScreen';
-import ProfileScreen from './components/ProfileScreen';
-import IssueDetailScreen from './components/IssueDetailScreen';
 import NavItem from './components/NavItem';
+import LoadingSpinner from './components/LoadingSpinner';
 import { Plus, LayoutGrid, User as UserIcon, Shield, Sparkles } from 'lucide-react';
+
+const HomeScreen = lazy(() => import('./components/HomeScreen'));
+const ReportScreen = lazy(() => import('./components/ReportScreen'));
+const DashboardScreen = lazy(() => import('./components/DashboardScreen'));
+const SuccessScreen = lazy(() => import('./components/SuccessScreen'));
+const ProfileScreen = lazy(() => import('./components/ProfileScreen'));
+const IssueDetailScreen = lazy(() => import('./components/IssueDetailScreen'));
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<AppState>(AppState.AUTH);
@@ -153,7 +155,9 @@ useEffect(() => {
       {/* Main Content */}
       <main className="flex-1 relative flex flex-col overflow-hidden">
         <div className={`flex-1 overflow-hidden flex flex-col ${isFullScreenPage ? '' : 'max-w-5xl mx-auto w-full'}`}>
-          {renderPage()}
+          <Suspense fallback={<LoadingSpinner />}>
+            {renderPage()}
+          </Suspense>
         </div>
 
         {/* Bottom Nav - Mobile */}
