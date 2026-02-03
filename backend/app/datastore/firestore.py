@@ -1,5 +1,6 @@
 
 import os
+from functools import lru_cache
 from google.cloud import firestore
 from app.domain.models import Issue
 
@@ -25,3 +26,8 @@ class IssueRepository:
             Issue(**doc.to_dict())
             for doc in self.collection.stream()
         ]
+
+@lru_cache
+def get_issue_repo() -> IssueRepository:
+    """Returns a cached instance of IssueRepository (Singleton)."""
+    return IssueRepository()

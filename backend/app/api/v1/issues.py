@@ -5,24 +5,17 @@ from typing import List
 
 from app.domain.models import Issue, IssueStatus
 from app.domain.schemas import IssueCreateRequest, IssueCreateResponse
-from app.datastore.firestore import IssueRepository
+from app.datastore.firestore import IssueRepository, get_issue_repo
 from app.events.publisher import EventPublisher
 
 router = APIRouter(prefix="/api/v1/issues", tags=["issues"])
 
 LOCAL_DEV = os.getenv("LOCAL_DEV", "false").lower() == "true"
 
-router = APIRouter(prefix="/api/v1/issues", tags=["issues"])
-
-
-def get_repo():
-    return IssueRepository()
-
-
 @router.post("", response_model=IssueCreateResponse)
 def create_issue(
     payload: IssueCreateRequest,
-    repo: IssueRepository = Depends(get_repo),
+    repo: IssueRepository = Depends(get_issue_repo),
 ):
     try:
         issue_id = f"ISSUE_{uuid.uuid4().hex[:8]}"

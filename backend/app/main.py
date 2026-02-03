@@ -14,7 +14,7 @@ from app.crews.vision.worker import VisionWorker
 from app.crews.routing.worker import RoutingWorker
 from app.crews.verification.worker import VerificationWorker
 
-from app.datastore.firestore import IssueRepository
+from app.datastore.firestore import IssueRepository, get_issue_repo
 from app.services.gemini.client import GeminiClient
 from app.events.publisher import EventPublisher
 
@@ -66,25 +66,9 @@ async def force_cors_on_errors(request: Request, call_next):
 
 app.include_router(issues_router)
 
-@app.middleware("http")
-async def force_cors_on_errors(request: Request, call_next):
-    try:
-        return await call_next(request)
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)},
-            headers={
-                "Access-Control-Allow-Origin": "https://civicsenseai.vercel.app"
-            },
-        )
-
 # -------------------------
 # Factories
 # -------------------------
-
-def get_repo() -> IssueRepository:
-    return IssueRepository()
 
 def get_gemini() -> GeminiClient | None:
     if LOCAL_DEV:
@@ -107,7 +91,7 @@ def get_publisher() -> EventPublisher | None:
 @app.post("/events/vision")
 async def vision_event(request: Request):
     worker = VisionWorker(
-        repo=get_repo(),
+        repo=get_issue_repo(),
         gemini=get_gemini(),
         publisher=get_publisher(),
     )
@@ -117,7 +101,7 @@ async def vision_event(request: Request):
 @app.post("/events/routing")
 async def routing_event(request: Request):
     worker = RoutingWorker(
-        repo=get_repo(),
+        repo=get_issue_repo(),
         gemini=get_gemini(),
         publisher=get_publisher(),
     )
@@ -127,7 +111,7 @@ async def routing_event(request: Request):
 @app.post("/events/verification")
 async def verification_event(request: Request):
     worker = VerificationWorker(
-        repo=get_repo(),
+        repo=get_issue_repo(),
         gemini=get_gemini(),
         publisher=get_publisher(),
     )
