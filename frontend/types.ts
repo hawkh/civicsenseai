@@ -1,4 +1,3 @@
-
 export enum AppState {
   ONBOARDING = 'ONBOARDING',
   AUTH = 'AUTH',
@@ -21,30 +20,18 @@ export enum IssueStatus {
   CLASSIFIED = "classified",
   ROUTED = "routed",
   VERIFIED = "verified",
+  IN_PROGRESS = "in_progress",
+  RESOLVED = "resolved",
 }
 
 export interface CivicIssue {
   id: string;
   description: string;
   image_url: string;
+  image?: string; // Legacy/Compat
   location: Location;
   status: IssueStatus;
-  created_at?: string;
-}
-
-
-export interface Location {
-  latitude: number;
-  longitude: number;
-  address?: string;
-}
-
-export interface CivicIssue {
-  id: string;
-  description: string;
-  image_url: string;
-  location: Location;
-  status: IssueStatus;
+  category?: string;
   created_at?: string;
 }
 
