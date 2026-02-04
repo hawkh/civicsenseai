@@ -94,13 +94,8 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
       const apiResult = await createIssue({
         imageBase64: image,
         description: description || "No description provided",
-        location:
-          location ??
-          ({
-            latitude: 0,
-            longitude: 0,
-            address: addressInput,
-          } as Location),
+        latitude: location?.latitude ?? 0,
+        longitude: location?.longitude ?? 0,
       });
 
       // 🔑 Backend is source of truth

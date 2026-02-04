@@ -14,15 +14,15 @@ import { Plus, LayoutGrid, User as UserIcon, Shield, Sparkles } from 'lucide-rea
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<AppState>(AppState.AUTH);
   const [user, setUser] = useState<User | null>(null);
-  const [issues, setIssues] = useState<CivicIssue[]>([]);
-  const [selectedIssue, setSelectedIssue] = useState<CivicIssue | null>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem('civic_issues');
-    if (saved) {
-      setIssues(JSON.parse(saved));
+  const [issues, setIssues] = useState<CivicIssue[]>(() => {
+    try {
+      const saved = localStorage.getItem('civic_issues');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
     }
-  }, []);
+  });
+  const [selectedIssue, setSelectedIssue] = useState<CivicIssue | null>(null);
 
   useEffect(() => {
     localStorage.setItem('civic_issues', JSON.stringify(issues));
@@ -81,10 +81,10 @@ useEffect(() => {
     setCurrentPage(page);
   }, []);
 
-  const openIssueDetail = (issue: CivicIssue) => {
+  const openIssueDetail = useCallback((issue: CivicIssue) => {
     setSelectedIssue(issue);
     setCurrentPage(AppState.ISSUE_DETAIL);
-  };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
