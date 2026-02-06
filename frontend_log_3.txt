@@ -1,0 +1,10 @@
+
+> civic-sense-ai@0.0.0 dev
+> vite
+
+
+  VITE v6.4.1  ready in 345 ms
+
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: use --host to expose
+10:38:36 AM [vite] (client) hmr update /components/ReportScreen.tsx, /index.css
