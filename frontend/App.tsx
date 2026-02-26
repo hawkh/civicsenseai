@@ -61,30 +61,30 @@ useEffect(() => {
 }, [issues.length]);
 
 
-  const handleLogin = (newUser: User) => {
+  const handleLogin = useCallback((newUser: User) => {
     setUser(newUser);
     setCurrentPage(AppState.HOME);
-  };
+  }, []);
 
-  const handleIssueSubmit = (newIssue: CivicIssue) => {
-    setIssues([newIssue, ...issues]);
+  const handleIssueSubmit = useCallback((newIssue: CivicIssue) => {
+    setIssues(prev => [newIssue, ...prev]);
     setSelectedIssue(newIssue);
     setCurrentPage(AppState.SUCCESS);
-  };
+  }, []);
 
-  const handleDeleteIssue = (id: string) => {
+  const handleDeleteIssue = useCallback((id: string) => {
     setIssues(prev => prev.filter(i => i.id !== id));
     setCurrentPage(AppState.DASHBOARD);
-  };
+  }, []);
 
   const navigate = useCallback((page: AppState) => {
     setCurrentPage(page);
   }, []);
 
-  const openIssueDetail = (issue: CivicIssue) => {
+  const openIssueDetail = useCallback((issue: CivicIssue) => {
     setSelectedIssue(issue);
     setCurrentPage(AppState.ISSUE_DETAIL);
-  };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {

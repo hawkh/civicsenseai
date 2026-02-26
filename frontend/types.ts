@@ -27,22 +27,9 @@ export interface CivicIssue {
   id: string;
   description: string;
   image_url: string;
-  location: Location;
-  status: IssueStatus;
-  created_at?: string;
-}
-
-
-export interface Location {
-  latitude: number;
-  longitude: number;
-  address?: string;
-}
-
-export interface CivicIssue {
-  id: string;
-  description: string;
-  image_url: string;
+  // Optional fields for backward compatibility or UI display
+  image?: string;
+  category?: string;
   location: Location;
   status: IssueStatus;
   created_at?: string;
