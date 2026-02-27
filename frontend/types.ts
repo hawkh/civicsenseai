@@ -10,12 +10,6 @@ export enum AppState {
   ISSUE_DETAIL = 'ISSUE_DETAIL'
 }
 
-export interface Location {
-  latitude: number;
-  longitude: number;
-  address?: string;
-}
-
 export enum IssueStatus {
   SUBMITTED = "submitted",
   CLASSIFIED = "classified",
@@ -23,16 +17,6 @@ export enum IssueStatus {
   VERIFIED = "verified",
 }
 
-export interface CivicIssue {
-  id: string;
-  description: string;
-  image_url: string;
-  location: Location;
-  status: IssueStatus;
-  created_at?: string;
-}
-
-
 export interface Location {
   latitude: number;
   longitude: number;
@@ -43,6 +27,9 @@ export interface CivicIssue {
   id: string;
   description: string;
   image_url: string;
+  // Optional fields for backward compatibility and UI display
+  image?: string;
+  category?: string;
   location: Location;
   status: IssueStatus;
   created_at?: string;
