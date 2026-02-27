@@ -81,10 +81,10 @@ useEffect(() => {
     setCurrentPage(page);
   }, []);
 
-  const openIssueDetail = (issue: CivicIssue) => {
+  const openIssueDetail = React.useCallback((issue: CivicIssue) => {
     setSelectedIssue(issue);
     setCurrentPage(AppState.ISSUE_DETAIL);
-  };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
