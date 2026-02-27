@@ -37,7 +37,7 @@ useEffect(() => {
       const issue = prevIssues[indexToUpdate];
       if (!issue || issue.status === IssueStatus.VERIFIED) return prevIssues;
 
-      let nextStatus = issue.status;
+      let nextStatus: IssueStatus = issue.status;
 
       if (issue.status === IssueStatus.SUBMITTED) {
         nextStatus = IssueStatus.CLASSIFIED;
@@ -81,10 +81,10 @@ useEffect(() => {
     setCurrentPage(page);
   }, []);
 
-  const openIssueDetail = (issue: CivicIssue) => {
+  const openIssueDetail = useCallback((issue: CivicIssue) => {
     setSelectedIssue(issue);
     setCurrentPage(AppState.ISSUE_DETAIL);
-  };
+  }, []);
 
   const renderPage = () => {
     switch (currentPage) {
