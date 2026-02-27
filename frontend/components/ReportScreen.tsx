@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { CivicIssue, Location } from "../types";
 import { createIssue } from "../api/issues";
+import { compressImage } from "../utils";
 
 import {
   Camera,
@@ -69,17 +70,19 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
   // -------------------------
   // Image
   // -------------------------
-  const handleFileChange = (
+  const handleFileChange = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImage(reader.result as string);
-    };
-    reader.readAsDataURL(file);
+    try {
+      // ⚡ Optimized: Compress image before storing in state/localstorage
+      const compressed = await compressImage(file);
+      setImage(compressed);
+    } catch (error) {
+      console.error("Image compression failed", error);
+    }
   };
 
   // -------------------------
@@ -94,13 +97,8 @@ const ReportScreen: React.FC<ReportScreenProps> = ({
       const apiResult = await createIssue({
         imageBase64: image,
         description: description || "No description provided",
-        location:
-          location ??
-          ({
-            latitude: 0,
-            longitude: 0,
-            address: addressInput,
-          } as Location),
+        latitude: location?.latitude ?? 0,
+        longitude: location?.longitude ?? 0,
       });
 
       // 🔑 Backend is source of truth
